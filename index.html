@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoldJP — What actually sells in Japan, before you buy</title>
+<meta name="description" content="Turn Yahoo! Auctions closed-sale data into a floor price, a spread and a velocity figure — so you stop sourcing from Japan in a language you can't read.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://hiroshiverynice.github.io/soldjp-site/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SoldJP">
+<meta property="og:title" content="SoldJP — What actually sells in Japan, before you buy">
+<meta property="og:description" content="240 sold in 120 days. Median ¥14,255. Spread 2.4×. Real Yahoo! Auctions closed-sale data, in English.">
+<meta property="og:url" content="https://hiroshiverynice.github.io/soldjp-site/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SoldJP — What actually sells in Japan, before you buy">
+<meta name="twitter:description" content="240 sold in 120 days. Median ¥14,255. Spread 2.4×. Real Yahoo! Auctions closed-sale data, in English.">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23131C33'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='17' font-weight='700' fill='%23CB9C58' text-anchor='middle'%3EJP%3C/text%3E%3C/svg%3E">
+
+<style>
+  /* ---------- tokens: light (default, un-stamped) ---------- */
+  :root {
+    --bg:        #E7EAF0;
+    --surface:   #FCFCFB;
+    --surface-2: #F1F3F7;
+    --ink:       #131C33;
+    --ink-2:     #4E5B79;
+    --ink-3:     #78849E;
+    --rule:      #C4CBDA;
+    --rule-soft: #DBE0EA;
+    --accent:    #24468C;
+    --brass:     #8C6224;
+    --brass-bg:  #EFE6D5;
+    --pos:       #1C6244;
+    --neg:       #9C3524;
+    --shadow:    0 1px 2px rgba(19,28,51,.06), 0 8px 24px -12px rgba(19,28,51,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #0E1320;
+      --surface:   #161D2D;
+      --surface-2: #1D2537;
+      --ink:       #E3E8F2;
+      --ink-2:     #96A3BE;
+      --ink-3:     #6F7C99;
+      --rule:      #2B3550;
+      --rule-soft: #212A40;
+      --accent:    #86A9E8;
+      --brass:     #CB9C58;
+      --brass-bg:  #2A2416;
+      --pos:       #4FB88A;
+      --neg:       #E08272;
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #0E1320;
+    --surface:   #161D2D;
+    --surface-2: #1D2537;
+    --ink:       #E3E8F2;
+    --ink-2:     #96A3BE;
+    --ink-3:     #6F7C99;
+    --rule:      #2B3550;
+    --rule-soft: #212A40;
+    --accent:    #86A9E8;
+    --brass:     #CB9C58;
+    --brass-bg:  #2A2416;
+    --pos:       #4FB88A;
+    --neg:       #E08272;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+  }
+
+  :root {
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
+    --wrap: 62rem;
+    --col:  40rem;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { width: min(100% - 2.5rem, var(--wrap)); margin-inline: auto; }
+  .col  { width: min(100%, var(--col)); }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .7rem; font-weight: 600;
+    letter-spacing: .16em; text-transform: uppercase;
+    color: var(--brass); margin: 0;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; letter-spacing: -.022em; }
+  h1 { font-size: clamp(2.1rem, 5.4vw, 3.4rem); font-weight: 800; line-height: 1.05; }
+  h2 { font-size: clamp(1.5rem, 3.2vw, 2rem); font-weight: 750; line-height: 1.15; }
+  h3 { font-size: 1.06rem; font-weight: 700; }
+  p  { margin: 0; }
+  a  { color: var(--accent); }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .lead { font-size: 1.14rem; color: var(--ink-2); }
+  .fine { font-size: .84rem; color: var(--ink-3); line-height: 1.5; }
+
+  section { padding-block: clamp(3.2rem, 7vw, 5.2rem); }
+  .band { border-top: 1px solid var(--rule); background: var(--surface); }
+  .stack { display: flex; flex-direction: column; }
+  .g-2 { gap: .5rem; }  .g-3 { gap: .85rem; }
+  .g-5 { gap: 1.6rem; } .g-7 { gap: 2.6rem; }
+
+  header.mast { border-bottom: 1px solid var(--rule); background: var(--surface); }
+  .mast-in {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 1rem; padding-block: 1.05rem; flex-wrap: wrap;
+  }
+  .logo { font-family: var(--mono); font-weight: 700; font-size: 1.02rem; color: var(--ink); }
+  .logo b { color: var(--brass); font-weight: 700; }
+  .mast-note { font-family: var(--mono); font-size: .72rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3); }
+
+  .hero-grid { display: grid; grid-template-columns: 1fr; gap: 2.6rem; align-items: start; }
+  @media (min-width: 60rem) { .hero-grid { grid-template-columns: 1.05fr .95fr; gap: 3.4rem; } }
+  .hero h1 em { font-style: normal; background: linear-gradient(transparent 66%, var(--brass-bg) 66%); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 3px; box-shadow: var(--shadow); overflow: hidden;
+  }
+  .card-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: .75rem; padding: .8rem 1.1rem;
+    border-bottom: 1px solid var(--rule); background: var(--surface-2); flex-wrap: wrap;
+  }
+  .card-head .q { font-family: var(--mono); font-size: .92rem; font-weight: 700; }
+  .card-body { padding: 1.1rem; display: flex; flex-direction: column; gap: 1.15rem; }
+
+  .pill {
+    font-family: var(--mono); font-size: .66rem; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase;
+    padding: .18rem .5rem; border-radius: 2px; white-space: nowrap;
+  }
+  .pill.ok    { color: var(--pos); background: color-mix(in srgb, var(--pos) 13%, transparent); }
+  .pill.risky { color: var(--neg); background: color-mix(in srgb, var(--neg) 13%, transparent); }
+
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.2rem, 1fr)); gap: .9rem 1rem; }
+  .kv div { display: flex; flex-direction: column; gap: .12rem; }
+  .kv .k { font-family: var(--mono); font-size: .64rem; letter-spacing: .11em;
+    text-transform: uppercase; color: var(--ink-3); }
+  .kv .v { font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 1.24rem; font-weight: 700; line-height: 1.1; }
+
+  .ruler { display: flex; flex-direction: column; gap: .42rem; }
+  .ruler-track { position: relative; height: 30px; background: var(--surface-2);
+    border: 1px solid var(--rule-soft); border-radius: 2px; }
+  .ruler-box { position: absolute; top: 0; bottom: 0;
+    background: color-mix(in srgb, var(--accent) 17%, transparent);
+    border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); }
+  .ruler-med { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--brass); }
+  .ruler-scale { display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: .68rem; color: var(--ink-3);
+    font-variant-numeric: tabular-nums; }
+
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+  th, td { text-align: left; padding: .38rem 0; border-bottom: 1px solid var(--rule-soft); }
+  th { font-family: var(--mono); font-size: .64rem; letter-spacing: .11em;
+    text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .tbl-scroll { overflow-x: auto; }
+
+  .bar { height: 7px; background: var(--accent); border-radius: 1px; opacity: .55; }
+  .gap-row td { padding-block: .55rem; }
+  .mult { font-weight: 700; color: var(--neg); }
+  .same { color: var(--ink-3); }
+
+  .feats { display: grid; grid-template-columns: 1fr; gap: 1.6rem; }
+  @media (min-width: 48rem) { .feats { grid-template-columns: repeat(3, 1fr); gap: 2rem; } }
+  .feat { display: flex; flex-direction: column; gap: .45rem;
+    padding-top: .9rem; border-top: 2px solid var(--ink); }
+
+  .plans { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+  @media (min-width: 44rem) { .plans { grid-template-columns: 1fr 1fr; } }
+  .plan { padding: 1.3rem; display: flex; flex-direction: column; gap: .7rem; }
+  .plan .price { font-family: var(--mono); font-size: 2rem; font-weight: 700; letter-spacing: -.02em; }
+  .plan .price small { font-size: .82rem; font-weight: 500; color: var(--ink-3); letter-spacing: 0; }
+  .plan ul { margin: 0; padding-left: 1.05rem; display: flex; flex-direction: column;
+    gap: .3rem; font-size: .93rem; color: var(--ink-2); }
+
+  form { display: flex; flex-direction: column; gap: 1rem; }
+  .field { display: flex; flex-direction: column; gap: .35rem; }
+  label { font-family: var(--mono); font-size: .68rem; letter-spacing: .11em;
+    text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
+  input[type="email"], select {
+    font: inherit; font-size: 1rem; padding: .68rem .8rem; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  }
+  input[type="email"]:focus-visible, select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  button {
+    font: inherit; font-weight: 700; font-size: 1rem; cursor: pointer;
+    padding: .78rem 1.4rem; border: 1px solid var(--ink); border-radius: 3px;
+    background: var(--ink); color: var(--surface); transition: opacity .15s ease;
+  }
+  button:hover { opacity: .85; }
+  button[disabled] { opacity: .5; cursor: progress; }
+  .msg { font-size: .92rem; padding: .7rem .9rem; border-radius: 3px; display: none; }
+  .msg.show { display: block; }
+  .msg.good { color: var(--pos); background: color-mix(in srgb, var(--pos) 12%, transparent); }
+  .msg.warn { color: var(--brass); background: var(--brass-bg); }
+
+  .honest { border-left: 2px solid var(--brass); padding-left: 1.1rem; }
+  footer { border-top: 1px solid var(--rule); padding-block: 2rem 3rem; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="wrap mast-in">
+    <span class="logo">Sold<b>JP</b></span>
+    <span class="mast-note">Japan sold comps for exporters</span>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="stack g-5">
+      <p class="eyebrow">Yahoo! Auctions Japan &mdash; 120 days of closed sales</p>
+      <h1>You are sourcing from Japan <em>in a language you can't read.</em></h1>
+      <p class="lead">
+        Proxy services will happily bid on anything. None of them tell you what the
+        thing actually sells for in Japan, how many sold last month, or what you
+        should refuse to pay. SoldJP turns Japanese closed-auction data into the
+        three numbers you need before you commit: <strong>the floor, the spread,
+        and the velocity.</strong>
+      </p>
+      <p class="fine">
+        Every figure on this page is real, pulled from Yahoo! Auctions on
+        14&nbsp;August&nbsp;2026. Nothing here is a mockup.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="q">Nikon AF-S 50mm F1.8G</span>
+        <span class="pill ok">Tradeable</span>
+      </div>
+      <div class="card-body">
+        <div class="kv">
+          <div><span class="k">Sold / 120d</span><span class="num v">240</span></div>
+          <div><span class="k">Per day</span><span class="num v">2.0</span></div>
+          <div><span class="k">Median</span><span class="num v">&yen;14,255</span></div>
+          <div><span class="k">Spread</span><span class="num v">2.4&times;</span></div>
+        </div>
+
+        <div class="ruler">
+          <div class="ruler-track" role="img"
+               aria-label="Price range: 10th percentile 9,930 yen, median 14,255 yen, 90th percentile 23,637 yen">
+            <div class="ruler-box" style="left:0%; right:0%;"></div>
+            <div class="ruler-med" style="left:31.5%;"></div>
+          </div>
+          <div class="ruler-scale">
+            <span>p10 &yen;9,930</span>
+            <span style="color:var(--brass); font-weight:700;">med &yen;14,255</span>
+            <span>p90 &yen;23,637</span>
+          </div>
+        </div>
+
+        <div class="tbl-scroll">
+          <table>
+            <thead>
+              <tr><th>Condition</th><th class="n">Sold</th><th class="n">Median</th><th style="width:32%"></th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Like new</td><td class="n">22</td><td class="n">&yen;19,350</td><td><div class="bar" style="width:25%"></div></td></tr>
+              <tr><td>Excellent</td><td class="n">89</td><td class="n">&yen;14,500</td><td><div class="bar" style="width:100%"></div></td></tr>
+              <tr><td>Good</td><td class="n">80</td><td class="n">&yen;13,750</td><td><div class="bar" style="width:90%"></div></td></tr>
+              <tr><td>Fair</td><td class="n">12</td><td class="n">&yen;12,711</td><td><div class="bar" style="width:14%"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="kv" style="border-top:1px solid var(--rule-soft); padding-top:.9rem;">
+          <div><span class="k">Avg bids</span><span class="num v">11.4</span></div>
+          <div><span class="k">Contested</span><span class="num v">53%</span></div>
+          <div><span class="k">Dealer-listed</span><span class="num v">33%</span></div>
+          <div><span class="k">Max buy</span><span class="num v" style="color:var(--pos)">&yen;9,680</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap stack g-5">
+    <div class="col stack g-3">
+      <p class="eyebrow">Why searching in English isn't enough</p>
+      <h2>Brand names translate. The words that matter don't.</h2>
+      <p class="lead">
+        Yahoo! Auctions quietly normalises well-known brands, so English gets you
+        surprisingly far &mdash; right up until it doesn't. Type a category word
+        instead of a brand and you silently lose 90% of the market. You never see
+        an error. You just see a thinner, more expensive market than the one that
+        actually exists.
+      </p>
+    </div>
+
+    <div class="tbl-scroll" style="max-width:46rem">
+      <table>
+        <thead>
+          <tr>
+            <th>Your search</th><th class="n">Sold / 120d</th>
+            <th>What a Japanese seller writes</th><th class="n">Sold / 120d</th><th class="n">Missed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="gap-row">
+            <td>Seiko watch</td><td class="n">16,276</td>
+            <td lang="ja">セイコー 腕時計</td><td class="n">172,030</td>
+            <td class="n mult">10.6&times;</td>
+          </tr>
+          <tr class="gap-row">
+            <td>Nikon lens</td><td class="n">45,344</td>
+            <td lang="ja">ニコン レンズ</td><td class="n">45,344</td>
+            <td class="n same">&mdash;</td>
+          </tr>
+          <tr class="gap-row">
+            <td>Gundam</td><td class="n">433,883</td>
+            <td lang="ja">ガンダム</td><td class="n">433,883</td>
+            <td class="n same">&mdash;</td>
+          </tr>
+          <tr class="gap-row">
+            <td>Pokemon card</td><td class="n">771,884</td>
+            <td lang="ja">ポケモンカード</td><td class="n">767,363</td>
+            <td class="n same">&mdash;</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fine col">
+      Three of these four are identical, which is exactly what makes the fourth
+      dangerous: the failure is invisible and inconsistent. SoldJP searches both
+      sides and shows you the union.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap stack g-5">
+    <div class="col stack g-3">
+      <p class="eyebrow">The unit of a decision is a model, not a keyword</p>
+      <h2>&ldquo;Nikon lens&rdquo; is not a product. It's 45,344 different ones.</h2>
+      <p class="lead">
+        Most sourcing advice dies here. A category-level average is arithmetic
+        performed on unrelated objects. SoldJP measures the spread between the
+        10th and 90th percentile and refuses to give you a confident number when
+        the spread says your search is still a bucket.
+      </p>
+    </div>
+
+    <div class="plans" style="max-width:46rem">
+      <div class="card plan">
+        <div class="card-head" style="margin:-1.3rem -1.3rem .4rem;">
+          <span class="q">Nikon lens</span><span class="pill risky">Too broad</span>
+        </div>
+        <div class="kv">
+          <div><span class="k">Spread p90/p10</span><span class="num v" style="color:var(--neg)">39.5&times;</span></div>
+          <div><span class="k">Median</span><span class="num v">&yen;9,662</span></div>
+        </div>
+        <p class="fine">A &yen;1,200 filter ring and a &yen;48,000 telephoto averaged into one meaningless figure.</p>
+      </div>
+      <div class="card plan">
+        <div class="card-head" style="margin:-1.3rem -1.3rem .4rem;">
+          <span class="q">AF-S 50mm F1.8G</span><span class="pill ok">Tradeable</span>
+        </div>
+        <div class="kv">
+          <div><span class="k">Spread p90/p10</span><span class="num v" style="color:var(--pos)">2.4&times;</span></div>
+          <div><span class="k">Median</span><span class="num v">&yen;14,255</span></div>
+        </div>
+        <p class="fine">One object, 240 sales, a real price you can bid against.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap stack g-5">
+    <p class="eyebrow">What it does</p>
+    <div class="feats">
+      <div class="feat">
+        <h3>A floor, not an average</h3>
+        <p style="color:var(--ink-2); font-size:.95rem">
+          Percentiles from every closed sale in the last 120 days, split by condition
+          grade, with a maximum bid that already accounts for eBay's 13.25% final value
+          fee, payment fees, freight and proxy commission.
+        </p>
+      </div>
+      <div class="feat">
+        <h3>Velocity and contest</h3>
+        <p style="color:var(--ink-2); font-size:.95rem">
+          Sales per day and the share of lots that drew more than one bidder.
+          A high median with no competing bids is a trap; you'll see it before
+          you're holding the inventory.
+        </p>
+      </div>
+      <div class="feat">
+        <h3>Both languages, one search</h3>
+        <p style="color:var(--ink-2); font-size:.95rem">
+          Your English query is expanded into the Japanese terms sellers actually
+          write, including the katakana and kanji forms that never match a
+          romanised search.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="waitlist">
+  <div class="wrap hero-grid">
+    <div class="stack g-5">
+      <div class="stack g-3">
+        <p class="eyebrow">Planned pricing</p>
+        <h2>Priced below one mistake.</h2>
+        <p class="lead">
+          Overpaying by &yen;8,000 on a single lens costs more than a year of the
+          starter plan. That's the whole argument.
+        </p>
+      </div>
+
+      <div class="plans">
+        <div class="card plan">
+          <p class="eyebrow" style="color:var(--ink-3)">Starter</p>
+          <p class="price">$24<small> /mo</small></p>
+          <ul>
+            <li>150 lookups a month</li>
+            <li>Full percentile &amp; condition breakdown</li>
+            <li>Bilingual query expansion</li>
+          </ul>
+        </div>
+        <div class="card plan" style="border-color: var(--brass);">
+          <p class="eyebrow">Trader</p>
+          <p class="price">$49<small> /mo</small></p>
+          <ul>
+            <li>Unlimited lookups</li>
+            <li>Saved watchlists with price alerts</li>
+            <li>eBay comparison &amp; margin calculator</li>
+            <li>CSV export</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="honest stack g-2">
+        <p class="eyebrow">Being straight with you</p>
+        <p class="fine">
+          Nothing is built yet beyond the data engine that produced every number on
+          this page. Mercari is <strong>not</strong> covered at launch &mdash; only
+          Yahoo! Auctions, which runs to roughly 2&nbsp;million closed sales per
+          category per 120 days. If that's a dealbreaker, say so below and it
+          changes what gets built first.
+        </p>
+      </div>
+    </div>
+
+    <div class="card" style="align-self:start">
+      <div class="card-head"><span class="q">Join the first cohort</span></div>
+      <div class="card-body">
+        <p style="font-size:.95rem; color:var(--ink-2)">
+          Fifty seats at half price for the first three months, in exchange for
+          telling me what you source and where the current tools fail you.
+        </p>
+        <form id="wl" novalidate>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" required autocomplete="email"
+                   placeholder="you@example.com">
+          </div>
+          <div class="field">
+            <label for="cat">What do you source from Japan?</label>
+            <select id="cat" name="category">
+              <option value="">Select one</option>
+              <option>Cameras &amp; lenses</option>
+              <option>Watches</option>
+              <option>Trading cards</option>
+              <option>Retro games &amp; consoles</option>
+              <option>Anime figures &amp; merch</option>
+              <option>Musical instruments</option>
+              <option>Car &amp; motorcycle parts</option>
+              <option>Fashion &amp; vintage clothing</option>
+              <option>Not sourcing yet - researching</option>
+              <option>Something else</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="wtp">Would you pay $24/month for this?</label>
+            <select id="wtp" name="willingness" required>
+              <option value="">Select one</option>
+              <option>Yes - I'd start today</option>
+              <option>Yes, but only once Mercari is included</option>
+              <option>Only at a lower price</option>
+              <option>No - I'd use it if free</option>
+              <option>Not sure yet</option>
+            </select>
+          </div>
+          <button type="submit">Request an invite</button>
+          <p class="msg" id="msg" role="status" aria-live="polite"></p>
+        </form>
+        <p class="fine">One email when it opens. No newsletter, no sharing your address.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap stack g-2">
+    <p class="fine">
+      SoldJP is an independent tool. It is not affiliated with, endorsed by, or
+      connected to Yahoo! Japan, LY Corporation, Mercari, or eBay.
+    </p>
+    <p class="fine">
+      Figures sampled 14 August 2026 from publicly listed closed auction results.
+      Market data changes daily; past sales don't guarantee future prices.
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Paste your Google Apps Script Web App URL (or Formspree endpoint) here.
+  // Left empty, the form runs in preview mode and only logs to the console.
+  const FORM_ENDPOINT = "";
+
+  const form = document.getElementById("wl");
+  const msg  = document.getElementById("msg");
+
+  function say(text, kind) {
+    msg.textContent = text;
+    msg.className = "msg show " + kind;
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    data.ref = document.referrer || "direct";
+    data.ts  = new Date().toISOString();
+
+    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      say("That email address doesn't look right. Check it and try again.", "warn");
+      return;
+    }
+    if (!data.willingness) {
+      say("Pick an answer for the pricing question - it's the one that decides what gets built.", "warn");
+      return;
+    }
+    if (!FORM_ENDPOINT) {
+      say("Preview mode: set FORM_ENDPOINT in the page source to start collecting signups.", "warn");
+      console.log("Captured:", data);
+      return;
+    }
+
+    const btn = form.querySelector("button");
+    btn.disabled = true;
+
+    // text/plain avoids a CORS preflight, which Apps Script cannot answer.
+    fetch(FORM_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(data)
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.status);
+        form.reset();
+        say("You're on the list. I'll email you once before launch, and that's it.", "good");
+      })
+      .catch(function () {
+        say("That didn't go through. Email soldjp.beta@gmail.com and I'll add you by hand.", "warn");
+      })
+      .finally(function () { btn.disabled = false; });
+  });
+</script>
+</body>
+</html>
