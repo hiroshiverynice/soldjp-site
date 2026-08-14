@@ -508,6 +508,28 @@
             </select>
           </div>
           <div class="field">
+            <label for="freq">How often do you buy from Japan?</label>
+            <select id="freq" name="frequency" required>
+              <option value="">Select one</option>
+              <option>Several times a week</option>
+              <option>About once a week</option>
+              <option>A few times a month</option>
+              <option>Every month or two</option>
+              <option>A few times a year</option>
+              <option>Haven't started yet</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="why">Why do you buy?</label>
+            <select id="why" name="intent">
+              <option value="">Select one</option>
+              <option>To resell for profit</option>
+              <option>Both - I keep some, sell some</option>
+              <option>For my own collection</option>
+              <option>For my shop or business inventory</option>
+            </select>
+          </div>
+          <div class="field">
             <label for="wtp">Would you pay $24/month for this?</label>
             <select id="wtp" name="willingness" required>
               <option value="">Select one</option>
@@ -561,6 +583,10 @@
 
     if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       say("That email address doesn't look right. Check it and try again.", "warn");
+      return;
+    }
+    if (!data.frequency) {
+      say("How often you buy matters more than anything else here - please pick one.", "warn");
       return;
     }
     if (!data.willingness) {
